@@ -16,6 +16,7 @@ enum WindowFactory {
     homeViewController.title = "Sleep Sounds"
     let navigationController = UINavigationController(rootViewController: homeViewController)
     navigationController.navigationBar.barTintColor = .darkText
+    navigationController.navigationBar.barStyle = .black
     let textAttributes = [NSAttributedString.Key.foregroundColor: UIColor.systemOrange]
     navigationController.navigationBar.titleTextAttributes = textAttributes
     window.rootViewController = navigationController

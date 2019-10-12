@@ -14,7 +14,7 @@ struct Track {
   let playbackTime: TimeInterval
 }
 
-final class Player {
+final class Player: NSObject, AVAudioPlayerDelegate {
   let tracks: [Track]
   var currentPlayer: AVAudioPlayer?
   var currentTrackIndex = 0
@@ -30,6 +30,7 @@ final class Player {
     currentPlayer?.stop()
     let currentTrack = tracks[currentTrackIndex]
     currentPlayer = try! AVAudioPlayer(contentsOf: currentTrack.url)
+    currentPlayer?.delegate = self
     currentPlayer?.volume = 0
     currentPlayer?.numberOfLoops = -1
     currentPlayer?.play()
@@ -61,6 +62,10 @@ final class Player {
   func pause() {
     // TODO(xardas): deal with timers
     currentPlayer?.pause()
+  }
+  
+  func audioPlayerEndInterruption(_ player: AVAudioPlayer, withOptions flags: Int) {
+    player.play()
   }
 }
 

@@ -76,5 +76,9 @@ class ViewController: UIViewController {
     currentPlayer = Player(tracks: tracks)
     currentPlayer?.play()
   }
+  
+  override var preferredStatusBarStyle: UIStatusBarStyle {
+    return .lightContent
+  }
 }
 
