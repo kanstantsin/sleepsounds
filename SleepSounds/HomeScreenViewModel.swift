@@ -9,5 +9,15 @@
 import Foundation
 
 struct HomeScreenViewModel {
+  enum PlaybackState {
+    case stopped
+    case paused
+    case playing
+  }
   
+  var wakeUpTimeText: String
+  var wakeUpTimeDate: Date
+  var startText: String
+  var stopText: String
+  var playbackState: PlaybackState
 }

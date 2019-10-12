@@ -57,6 +57,11 @@ final class Player {
     playTimer?.invalidate()
     switchTimer?.invalidate()
   }
+  
+  func pause() {
+    // TODO(xardas): deal with timers
+    currentPlayer?.pause()
+  }
 }
 
 private let fadeDuration: TimeInterval = 2

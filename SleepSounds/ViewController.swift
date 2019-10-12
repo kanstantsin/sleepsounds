@@ -8,52 +8,15 @@
 
 import UIKit
 
-class TitleCell: UITableViewCell {
-}
-
-class DateCell: UITableViewCell {
-  var datePicker: UIDatePicker!
-  var onDateChanged: ((Date) -> ())?
-  var date: Date {
-    get {
-      return datePicker.date
-    }
-  }
-  
-  override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
-    super.init(style: style, reuseIdentifier: reuseIdentifier)
-    
-    datePicker = UIDatePicker(frame: .zero)
-    datePicker.datePickerMode = .time
-    contentView.addSubview(datePicker)
-    NSLayoutConstraint.activate([
-      datePicker.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-      datePicker.topAnchor.constraint(equalTo: contentView.topAnchor),
-      datePicker.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-      datePicker.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
-    ])
-    datePicker.date = Date()
-    datePicker.addTarget(self, action: #selector(dateChanged), for: .valueChanged)
-  }
-  
-  @objc func dateChanged(picker: UIDatePicker) {
-    onDateChanged?(picker.date)
-  }
-  
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-}
-
-class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+class ViewController: UIViewController {
   enum Cell: Int, CaseIterable {
     case start
     case date
   }
   
-  var tableView: UITableView!
+  var homeScreenView: HomeScreenView!
+  var wakeUpDate = Date().addingTimeInterval(60)
   var currentPlayer: Player?
-  var wakeUpDate = Date()
   
   init() {
     super.init(nibName: nil, bundle: nil)
@@ -66,71 +29,52 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
   override func viewDidLoad() {
     super.viewDidLoad()
     
-    tableView = UITableView(frame: view.bounds)
-    tableView.delegate = self
-    tableView.dataSource = self
-    view.addSubview(tableView)
+    let initialModel = HomeScreenViewModel(
+      wakeUpTimeText: "When would you like to wake up?",
+      wakeUpTimeDate: Date().addingTimeInterval(60),
+      startText: "Start",
+      stopText: "Stop",
+      playbackState: .stopped
+    )
+    homeScreenView = HomeScreenView(frame: view.bounds, model: initialModel)
+    view.addSubview(homeScreenView)
     NSLayoutConstraint.activate([
-      tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      tableView.topAnchor.constraint(equalTo: view.topAnchor),
-      tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+      homeScreenView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      homeScreenView.topAnchor.constraint(equalTo: view.topAnchor),
+      homeScreenView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      homeScreenView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
     ])
-    tableView.register(TitleCell.self, forCellReuseIdentifier: "StartCell")
-    tableView.register(DateCell.self, forCellReuseIdentifier: "DateCell")
-  }
-  
-  func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    return Cell.allCases.count
-  }
-  
-  func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-    guard let cellType = Cell(rawValue: indexPath.row) else {
-      assertionFailure()
-      return UITableViewCell()
+    homeScreenView.onStartStopButtonTap = onStartStop
+    homeScreenView.onDateChanged = { [weak self] date in
+      guard let self = self else { return }
+      self.wakeUpDate = date
+      self.homeScreenView.model.wakeUpTimeDate = date
     }
-    switch cellType {
-    case .start:
-      let cell = tableView.dequeueReusableCell(withIdentifier: "StartCell")!
-      cell.textLabel?.text = "Start"
-      return cell
-    case .date:
-      let cell = tableView.dequeueReusableCell(withIdentifier: "DateCell") as! DateCell
-      cell.onDateChanged = { date in
-        self.wakeUpDate = date
-      }
-      self.wakeUpDate = cell.date
-      return cell
-    }
-    
   }
   
-  func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+  private func onStartStop() {
+    switch homeScreenView.model.playbackState {
+    case .stopped, .paused:
+      start()
+      homeScreenView.model.playbackState = .playing
+    case .playing:
+      currentPlayer?.stop()
+      homeScreenView.model.playbackState = .stopped
+    }
+  }
+  
+  private func start() {
     let sounds = [
       "rain-01",
       "fire-1",
-      "bell",
+      "birds"
     ]
     
-    let futureWakeUpDate = wakeUpDate < Date() ? wakeUpDate.addingTimeInterval(60 * 60 * 24) : wakeUpDate
+    let tracks = TracksFactory.makeTracks(wakeUpDate: wakeUpDate, sounds: sounds)
     
-    let intervalTillWakeUp = futureWakeUpDate.timeIntervalSinceNow
-    let intervalForTrack = intervalTillWakeUp / TimeInterval(sounds.count)
-    let lastTrackInterval = min(60 * 30, intervalForTrack)
-    let firstTracksInterval = (intervalTillWakeUp - lastTrackInterval) / (TimeInterval(sounds.count - 1))
-    print("Intervals: \(firstTracksInterval) x \(sounds.count - 1) + \(lastTrackInterval)")
-    var tracks = sounds.dropLast().map { Track(url: $0.mp3ResourceUrl, playbackTime: firstTracksInterval) }
-    tracks.append(Track(url: sounds.last!.mp3ResourceUrl, playbackTime: lastTrackInterval))
     currentPlayer?.stop()
     currentPlayer = Player(tracks: tracks)
     currentPlayer?.play()
-  }
-}
-
-private extension String {
-  var mp3ResourceUrl: URL {
-    let urlString = Bundle.main.path(forResource: self, ofType: "mp3")!
-    return URL(fileURLWithPath: urlString)
   }
 }
 
